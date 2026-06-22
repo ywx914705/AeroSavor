@@ -96,3 +96,13 @@ def evt_recommendations(data: list) -> dict:
 def evt_done() -> dict:
     """流程结束事件。"""
     return {"type": "done"}
+
+
+def evt_agent_degraded(agent: str, message: str, fallback_reason: str = "") -> dict:
+    """Agent 降级事件：LLM 不可用，使用了规则/硬编码兜底。"""
+    return {
+        "type": "agent_degraded",
+        "agent": agent,
+        "message": message,
+        "fallback_reason": fallback_reason,
+    }

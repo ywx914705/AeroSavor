@@ -133,13 +133,21 @@ export function useChat() {
           } else if (ev.type === "supervisor_decision") {
             // Supervisor 决策 — 用 "decision" status 区分
             const nextAction = (ev as any).next as string | undefined
-            const nextLabel = nextAction ? decisionLabels[nextAction] ?? `→ ${nextAction}` : ""
             addThinkingStep({
               agentKey: "supervisor",
               agent: agentLabels.supervisor,
-              message: `${ev.reason ?? "策略调整"} ${nextLabel}`,
+              message: ev.reason ?? "策略调整",
               status: "decision",
               next: nextAction,
+            })
+          } else if (ev.type === "agent_degraded" && ev.agent) {
+            // Agent 降级 — LLM 不可用，使用了规则/硬编码兜底
+            const label = agentLabels[ev.agent] ?? ev.agent
+            addThinkingStep({
+              agentKey: ev.agent,
+              agent: label,
+              message: `${ev.message ?? ""}${ev.fallback_reason ? `（${ev.fallback_reason}）` : ""}`,
+              status: "error",
             })
           } else if (ev.type === "collaboration" && ev.from) {
             const label = agentLabels[ev.from] ?? ev.from

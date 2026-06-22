@@ -17,7 +17,7 @@ export interface Restaurant {
 }
 
 export interface SSEEvent {
-  type: "response" | "recommendations" | "route_info" | "error" | "agent_start" | "agent_done" | "collaboration" | "supervisor_decision" | "quality_retry" | "agent_message" | "delegation" | "heartbeat"
+  type: "response" | "recommendations" | "route_info" | "error" | "agent_start" | "agent_done" | "agent_degraded" | "collaboration" | "supervisor_decision" | "quality_retry" | "agent_message" | "delegation" | "heartbeat"
   content?: string
   data?: Restaurant[]
   route_info?: RouteInfoPayload
@@ -29,6 +29,7 @@ export interface SSEEvent {
   next?: string
   new_strategy?: string
   task?: string
+  fallback_reason?: string
 }
 
 export interface RouteInfoPayload {

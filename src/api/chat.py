@@ -397,6 +397,7 @@ async def chat_stream(
         home_city=user.home_city,  # 永久层：跨会话的常驻城市
     )
     initial["messages"] = list(session.messages or [])
+    initial["stream_chat_response"] = True  # SSE 端点：让 chat agent 只准备 prompt 不调 LLM
     if prev_ctx:
         initial["prev_search_context"] = prev_ctx
 
@@ -521,17 +522,36 @@ async def chat_stream(
                         accumulated = fallback
                 last_state["_final_text"] = accumulated
             else:
-                # 非搜索意图（闲聊/澄清）—— ChatAgent 已在图内生成回复
+                # 非搜索意图（闲聊/澄清）—— 流式生成回复
+                chat_prompt = result.get("chat_prompt", "")
                 final_text = result.get("final_response", "")
 
-                if final_text:
-                    # 图内已生成完整回复，直接推送
+                if chat_prompt and not final_text:
+                    # stream_chat_response=True 时，图内只准备了 prompt，这里流式生成
+                    from ..core.product_identity import PERSONALITY_PROMPT
+                    llm = get_claude()
+                    streamed = False
+                    if llm is not None:
+                        try:
+                            async for chunk in llm.astream(chat_prompt, max_tokens=500, system_prompt=PERSONALITY_PROMPT):
+                                accumulated += chunk
+                                payload = {"type": "response", "content": accumulated}
+                                yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+                                streamed = True
+                        except Exception as e:
+                            logger.warning("chat astream failed: %s", e)
+                    if not streamed and final_text:
+                        payload = {"type": "response", "content": final_text}
+                        yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+                        accumulated = final_text
+                elif final_text:
+                    # 图内已生成完整回复（非流式路径），直接推送
                     payload = {"type": "response", "content": final_text}
                     yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
                     accumulated = final_text
                 else:
-                    # 不应该发生，但安全兜底
-                    fallback = "你好！我是 AeroSavor，告诉我你想吃什么，我来帮你找 😊"
+                    # 兜底
+                    fallback = "嗨～有什么想吃的吗？告诉我，我帮你找 😊"
                     payload = {"type": "response", "content": fallback}
                     yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
                     accumulated = fallback

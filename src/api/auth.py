@@ -1,7 +1,7 @@
 """极简 JWT 鉴权（开发模式：未带 token → 返回默认用户）。"""
 from __future__ import annotations
 
-import uuiduuid
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 

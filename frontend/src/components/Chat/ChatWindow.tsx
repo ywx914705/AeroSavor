@@ -3,6 +3,7 @@ import { useChat } from "../../hooks/useChat"
 import { useChatStore } from "../../store/chat"
 import { MessageBubble } from "./MessageBubble"
 import { InputBar } from "./InputBar"
+import { ThinkingPanel } from "./ThinkingPanel"
 import { CardStack } from "../Restaurant/CardStack"
 import { RoutePanel } from "../Restaurant/RoutePanel"
 import { MapView } from "../Map/MapView"
@@ -201,6 +202,9 @@ function ChatContent() {
                 {messages.map((m) => (
                   <MessageBubble key={m.id} msg={m} />
                 ))}
+
+                {/* Agent thinking process - inline in chat */}
+                <ThinkingPanel />
 
                 {recommendations.length > 0 && (
                   <div className="mt-8 mb-6 animate-reveal-blur">

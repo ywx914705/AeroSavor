@@ -15,6 +15,9 @@ class ChatState(TypedDict):
     messages: list
     location_hint: Optional[str]       # 用户当前轮次声明的位置
     session_id: str                    # SSE 推送用
+    recommendations: list              # 之前的推荐结果（让 chat 能引用）
+    weather: Optional[dict]            # 当前天气数据
+    stream_chat_response: bool         # SSE 端点设为 True 时只准备 prompt 不调 LLM
 
     # ── 输出（写回主图） ──
     final_response: str

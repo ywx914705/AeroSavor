@@ -158,7 +158,15 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
   setFavoriteIds: (ids) => set({ favoriteIds: ids }),
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
-  addThinkingStep: (step) => set((s) => ({ thinkingSteps: [...s.thinkingSteps, { ...step, startTime: step.startTime || Date.now() }] })),
+  addThinkingStep: (step) => set((s) => {
+    // 如果同 agentKey 已有 "running" 状态的步骤，先将其标记为 done（避免重复 running 残留）
+    const steps = s.thinkingSteps.map((st) =>
+      st.agentKey === step.agentKey && st.status === "running"
+        ? { ...st, status: "done" as const, message: st.message + "（重试）", duration: st.startTime ? Date.now() - st.startTime : undefined }
+        : st
+    )
+    return { thinkingSteps: [...steps, { ...step, startTime: step.startTime || Date.now() }] }
+  }),
   updateThinkingStep: (agentKey: string, update: Partial<ThinkingStep>) => set((s) => {
     // Update the LAST matching step (most recent for this agentKey)
     let lastIdx = -1

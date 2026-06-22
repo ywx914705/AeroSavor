@@ -249,7 +249,7 @@ export function ThinkingPanel() {
 
         {/* Expandable agent steps */}
         {expanded && (
-          <div className="thinking-panel-expand px-3 py-2 max-h-[400px] overflow-y-auto">
+          <div className="thinking-panel-expand px-3 py-2 max-h-[250px] md:max-h-[400px] overflow-y-auto">
             {thinkingSteps.map((step, i) => (
               <AgentStepRow
                 key={`${step.agentKey}-${i}`}

@@ -71,6 +71,9 @@ async def resolve_destination_node(state: dict) -> dict:
 
 async def parallel_route_node(state: dict) -> dict:
     """并行计算步行 + 驾车路线。"""
+    session_id = state.get("session_id", "")
+    await push_event(session_id, evt_agent_start("route_agent", "规划路线..."))
+
     # route 意图可能跳过了 location_agent，从 prev_search_context 恢复用户位置
     origin = state.get("user_location") or state.get("resolved_location")
     if not origin:
@@ -83,10 +86,19 @@ async def parallel_route_node(state: dict) -> dict:
     city = state.get("user_city") or ""
 
     if not dest:
+        await push_event(session_id, evt_agent_done("route_agent", "无导航目标"))
         return {"route_info": None}
 
     route = await plan_routes(origin, dest, city=city)
     # 确保 destination_name 传递到 route_info
     if route:
         route["destination_name"] = state.get("destination_name") or state.get("target_poi_name")
+        modes = []
+        if route.get("walking"): modes.append("步行")
+        if route.get("driving"): modes.append("驾车")
+        if route.get("transit"): modes.append("公交")
+        mode_str = "、".join(modes) if modes else "路线"
+        await push_event(session_id, evt_agent_done("route_agent", f"路线规划完成（{mode_str}）"))
+    else:
+        await push_event(session_id, evt_agent_done("route_agent", "无法规划路线"))
     return {"route_info": route}

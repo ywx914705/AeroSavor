@@ -1122,8 +1122,19 @@ async def supervisor_decision_node(state: dict) -> dict:
     # 无 LLM 时走规则降级
     if llm is None:
         next_action = _rule_based_supervisor_decision(state)
-        logger.info("supervisor_decision: rule-based, action=%s", next_action)
-        await push_event(session_id, evt_supervisor_decision("规则决策", next_action))
+        # 构建有意义的决策原因
+        filtered_pois = state.get("filtered_pois", [])
+        poi_count = len(filtered_pois)
+        if next_action == "recommend_agent":
+            reason = f"找到{poi_count}家候选，直接推荐"
+        elif next_action == "search_agent":
+            reason = f"仅{poi_count}家候选，换关键词重搜"
+        elif next_action == "location_agent":
+            reason = "当前位置无结果，换个区域"
+        else:
+            reason = "输出当前结果"
+        logger.info("supervisor_decision: rule-based, action=%s reason=%s", next_action, reason)
+        await push_event(session_id, evt_supervisor_decision(reason, next_action))
         return {
             "next_action": next_action,
             "supervisor_reason": "规则降级决策",
