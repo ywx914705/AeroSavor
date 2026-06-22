@@ -1,0 +1,266 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ["./index.html", "./src/**/*.{ts,tsx}"],
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        // ── Primary accent: amber ──
+        accent: "#F59E0B",
+        "accent-hover": "#D97706",
+        "accent-light": "#FEF3C7",
+        "accent-soft": "#FFFBEB",
+
+        // ── Semantic aliases (keeping old names → new values) ──
+        terracotta: "#F59E0B",
+        "terracotta-light": "#FEF3C7",
+        "terracotta-dark": "#D97706",
+        sage: "#10B981",
+        "sage-light": "#ECFDF5",
+        "sage-dark": "#059669",
+        ochre: "#F59E0B",
+        "ochre-light": "#FEF3C7",
+        "ochre-dark": "#D97706",
+        moss: "#22C55E",
+        "moss-light": "#F0FDF4",
+        clay: "#78716C",
+        "clay-light": "#F5F5F4",
+        "clay-dark": "#57534E",
+
+        // ── Surfaces ──
+        sand: "#FAFAFA",
+        "sand-dim": "#F1F5F9",
+        oat: "#E2E8F0",
+        paper: "#FFFFFF",
+
+        // ── Neutrals (slate-based) ──
+        bark: "#0F172A",
+        barklight: "#1E293B",
+        stone: "#64748B",
+        dust: "#94A3B8",
+        fog: "#CBD5E1",
+
+        // ── Functional ──
+        primary: {
+          50: "#FFFBEB",
+          100: "#FEF3C7",
+          400: "#FBBF24",
+          500: "#F59E0B",
+          600: "#D97706",
+          700: "#B45309",
+        },
+        success: "#22C55E",
+        warning: "#F59E0B",
+        danger: "#EF4444",
+      },
+      fontFamily: {
+        sans: [
+          '"Inter"',
+          '"Epilogue"',
+          '"PingFang SC"',
+          '"Hiragino Sans GB"',
+          '"Microsoft YaHei"',
+          "Arial",
+          "sans-serif",
+        ],
+        display: [
+          '"Epilogue"',
+          '"Inter"',
+          '"PingFang SC"',
+          '"Hiragino Sans GB"',
+          '"Microsoft YaHei"',
+          "Arial",
+          "sans-serif",
+        ],
+        mono: ['"JetBrains Mono"', "Menlo", "monospace"],
+      },
+      fontSize: {
+        "ed-xs": ["11px", { lineHeight: "16px", letterSpacing: "0.02em" }],
+        "ed-sm": ["12px", { lineHeight: "18px" }],
+        "ed-base": ["14px", { lineHeight: "22px" }],
+        "ed-md": ["15px", { lineHeight: "24px" }],
+        "ed-lg": ["18px", { lineHeight: "26px" }],
+        "ed-xl": ["24px", { lineHeight: "30px" }],
+        "ed-2xl": ["32px", { lineHeight: "38px" }],
+        "ed-3xl": ["48px", { lineHeight: "52px" }],
+        "hero-sm": ["28px", { lineHeight: "34px", letterSpacing: "-0.02em" }],
+        "hero-md": ["40px", { lineHeight: "44px", letterSpacing: "-0.03em" }],
+        "hero-lg": ["56px", { lineHeight: "58px", letterSpacing: "-0.04em" }],
+      },
+      borderRadius: {
+        card: "16px",
+        pill: "9999px",
+        soft: "12px",
+        "2xl": "16px",
+      },
+      boxShadow: {
+        card: "0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.04)",
+        "card-hover": "0 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04)",
+        soft: "0 1px 2px rgba(0,0,0,0.04)",
+        warm: "0 2px 10px rgba(245,158,11,0.15)",
+        terrain: "0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.06)",
+        "terrain-hover": "0 4px 12px rgba(0,0,0,0.10), 0 8px 24px rgba(0,0,0,0.08)",
+        glow: "0 0 20px rgba(245,158,11,0.12)",
+        "focus-glow": "0 0 0 3px rgba(245,158,11,0.15), 0 2px 8px rgba(0,0,0,0.06)",
+        float: "0 8px 24px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04)",
+        "float-hover": "0 12px 32px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.06)",
+      },
+      spacing: {
+        18: "4.5rem",
+        88: "22rem",
+        128: "32rem",
+      },
+      animation: {
+        "fade-in": "fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+        breathe: "breathe 4s ease-in-out infinite",
+        "spin-slow": "spin 2s linear infinite",
+        "fade-up": "fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both",
+        "card-enter": "cardEnter 0.45s cubic-bezier(0.16, 1, 0.3, 1) both",
+        "slide-up": "slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both",
+        "reveal-blur": "revealBlur 0.7s cubic-bezier(0.22, 1, 0.36, 1) both",
+        "pop-in": "popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both",
+        "ambient-float": "ambientFloat 6s ease-in-out infinite",
+        "float-gentle": "floatGentle 6s ease-in-out infinite",
+        shimmer: "shimmer 1.8s ease-in-out infinite",
+        "pulse-ring": "pulseRing 2s ease-out infinite",
+        "rank-glow": "rankGlow 3s ease-in-out infinite",
+        "shimmer-border": "shimmerBorder 2s ease-in-out infinite",
+        "progress-fill": "progressFill 3s ease-out forwards",
+        "glow-pulse": "glowPulse 3s ease-in-out infinite",
+        "mesh-shift": "meshShift 20s ease-in-out infinite",
+        "orb-1": "orbFloat1 18s ease-in-out infinite",
+        "orb-2": "orbFloat2 22s ease-in-out infinite",
+        "orb-3": "orbFloat3 25s ease-in-out infinite",
+        "title-gradient": "titleGradient 4s ease-in-out infinite",
+        "stream-pulse": "streamPulse 1.5s ease-in-out infinite",
+        "msg-user": "msgEnterUser 0.4s cubic-bezier(0.16, 1, 0.3, 1) both",
+        "msg-ai": "msgEnterAi 0.4s cubic-bezier(0.16, 1, 0.3, 1) both",
+        "heart-pop": "heartPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "gradient-flow": "gradientFlow 2s ease infinite",
+      },
+      keyframes: {
+        fadeIn: {
+          "0%": { opacity: "0", transform: "translateY(6px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        breathe: {
+          "0%, 100%": { opacity: "1", transform: "scale(1)" },
+          "50%": { opacity: "0.9", transform: "scale(1.03)" },
+        },
+        fadeUp: {
+          "0%": { opacity: "0", transform: "translateY(12px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        cardEnter: {
+          "0%": { opacity: "0", transform: "translateY(16px) scale(0.98)" },
+          "100%": { opacity: "1", transform: "translateY(0) scale(1)" },
+        },
+        slideUp: {
+          "0%": { opacity: "0", transform: "translateY(20px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        revealBlur: {
+          "0%": { opacity: "0", transform: "translateY(24px) scale(0.94)", filter: "blur(8px)" },
+          "100%": { opacity: "1", transform: "translateY(0) scale(1)", filter: "blur(0)" },
+        },
+        popIn: {
+          "0%": { opacity: "0", transform: "scale(0.6)" },
+          "60%": { opacity: "1", transform: "scale(1.06)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
+        ambientFloat: {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-6px)" },
+        },
+        floatGentle: {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-4px)" },
+        },
+        shimmer: {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
+        },
+        pulseRing: {
+          "0%": { transform: "scale(1)", opacity: "0.6" },
+          "100%": { transform: "scale(2.5)", opacity: "0" },
+        },
+        rankGlow: {
+          "0%, 100%": { boxShadow: "0 0 0 0 rgba(245,158,11,0.25)" },
+          "50%": { boxShadow: "0 0 10px 2px rgba(245,158,11,0.12)" },
+        },
+        shimmerBorder: {
+          "0%, 100%": { borderColor: "rgba(245,158,11,0.15)" },
+          "50%": { borderColor: "rgba(245,158,11,0.4)" },
+        },
+        progressFill: {
+          "0%": { width: "0%" },
+          "100%": { width: "100%" },
+        },
+        glowPulse: {
+          "0%, 100%": { boxShadow: "0 0 20px rgba(245,158,11,0)" },
+          "50%": { boxShadow: "0 0 30px rgba(245,158,11,0.15)" },
+        },
+        meshShift: {
+          "0%, 100%": { backgroundPosition: "0% 50%, 100% 0%, 50% 100%" },
+          "25%": { backgroundPosition: "100% 0%, 0% 100%, 100% 50%" },
+          "50%": { backgroundPosition: "50% 100%, 100% 50%, 0% 0%" },
+          "75%": { backgroundPosition: "0% 0%, 50% 100%, 100% 0%" },
+        },
+        orbFloat1: {
+          "0%, 100%": { transform: "translate(0, 0) scale(1)" },
+          "25%": { transform: "translate(30px, -20px) scale(1.05)" },
+          "50%": { transform: "translate(-10px, -40px) scale(0.95)" },
+          "75%": { transform: "translate(20px, -10px) scale(1.02)" },
+        },
+        orbFloat2: {
+          "0%, 100%": { transform: "translate(0, 0) scale(1)" },
+          "33%": { transform: "translate(-25px, 15px) scale(1.08)" },
+          "66%": { transform: "translate(15px, -25px) scale(0.96)" },
+        },
+        orbFloat3: {
+          "0%, 100%": { transform: "translate(0, 0) scale(1)" },
+          "20%": { transform: "translate(20px, 30px) scale(0.97)" },
+          "50%": { transform: "translate(-30px, -10px) scale(1.06)" },
+          "80%": { transform: "translate(10px, -20px) scale(0.98)" },
+        },
+        titleGradient: {
+          "0%, 100%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
+        },
+        streamPulse: {
+          "0%, 100%": { borderColor: "rgba(245,158,11,0.2)" },
+          "50%": { borderColor: "rgba(245,158,11,0.5)" },
+        },
+        msgEnterUser: {
+          "0%": { opacity: "0", transform: "translateX(16px) scale(0.96)" },
+          "100%": { opacity: "1", transform: "translateX(0) scale(1)" },
+        },
+        msgEnterAi: {
+          "0%": { opacity: "0", transform: "translateX(-16px) scale(0.96)" },
+          "100%": { opacity: "1", transform: "translateX(0) scale(1)" },
+        },
+        heartPop: {
+          "0%": { transform: "scale(1)" },
+          "30%": { transform: "scale(1.35)" },
+          "60%": { transform: "scale(0.9)" },
+          "100%": { transform: "scale(1)" },
+        },
+        gradientFlow: {
+          "0%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
+          "100%": { backgroundPosition: "0% 50%" },
+        },
+      },
+      transitionTimingFunction: {
+        terrain: "cubic-bezier(0.16, 1, 0.3, 1)",
+        expo: "cubic-bezier(0.16, 1, 0.3, 1)",
+        spring: "cubic-bezier(0.34, 1.56, 0.64, 1)",
+      },
+      transitionDuration: {
+        400: "400ms",
+        600: "600ms",
+      },
+    },
+  },
+  plugins: [require("@tailwindcss/typography")],
+}

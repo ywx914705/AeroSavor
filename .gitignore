@@ -1,0 +1,51 @@
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.env
+.env.local
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Frontend
+node_modules/
+dist/
+.vite/
+.parcel-cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Local data
+data/
+*.sqlite
+
+# Redis dump
+dump.rdb
+
+# TypeScript incremental build
+*.tsbuildinfo
+
+# Claude Code
+.claude/
+
+# Unrelated projects
+personal-site/
+
+# Temp files
+temp-*.css
+package-lock.json
+postcss.config.js
