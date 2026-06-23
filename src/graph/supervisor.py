@@ -134,6 +134,44 @@ async def intent_parser_node(state: dict) -> dict:
                 **_collab_reset_fields(),
             }
 
+    # 快速规则：纯"附近"类词（无明确菜系但暗示搜索）→ search + 默认关键词
+    _NEARBY_PATTERNS = ["附近", "周边", "周围", "就近", "附近有"]
+    _has_nearby = any(p in query for p in _NEARBY_PATTERNS)
+    _has_search_hint = any(w in query for w in ["吃", "喝", "推荐", "搜", "有没有", "想去", "想吃", "来点", "什么", "哪", "好"])
+    if _has_nearby and not _has_search_hint and len(query) <= 6:
+        # 短query只包含"附近"→默认搜美食
+        logger.info("intent_parser: nearby-only rule, defaulting to '美食'")
+        return {
+            "intent": "search", "search_keywords": ["美食"],
+            "location_hint": None, "price_max": None, "price_min": None,
+            "feature_requests": [], "need_route": False,
+            "is_followup": False, "target_poi_name": None, "target_poi_id": None,
+            "declared_preferences": None,
+            **_collab_reset_fields(),
+        }
+
+    # 快速规则：否定句式（"不想吃火锅"、"不要烧烤"、"别推荐日料"等）
+    # → search意图，但把否定的菜系放入avoid_types避免搜到后重搜循环
+    _NEGATIVE_PATTERN = re.search(r"不[想爱吃要]|不要|别[给推荐]|不想|不爱", query)
+    if _NEGATIVE_PATTERN:
+        # 提取否定的菜系
+        negated_cuisines = []
+        for kw in _FOOD_KEYWORDS:
+            if kw in query:
+                negated_cuisines.append(kw)
+        if negated_cuisines:
+            logger.info("intent_parser: negative rule, disliked=%s", negated_cuisines)
+            # 默认搜索美食，但排除用户不想要的菜系
+            return {
+                "intent": "search", "search_keywords": ["美食"],
+                "location_hint": None, "price_max": None, "price_min": None,
+                "feature_requests": [], "need_route": False,
+                "is_followup": False, "target_poi_name": None, "target_poi_id": None,
+                "declared_preferences": {"disliked": negated_cuisines},
+                "search_strategy_hint": {"avoid_types": negated_cuisines, "prefer_types": [], "reason": "用户明确表示不想吃"},
+                **_collab_reset_fields(),
+            }
+
     # 快速规则：用户声明位置的句式（"我在XX"、"我住XX"、"我在成都"）
     # 增强判断：如果同时包含闲聊成分（"你记住了吗"等），走 chat 意图但透传位置
     _LOCATION_DECLARE = re.search(r"我[在住于](.+)", query)

@@ -9,7 +9,7 @@ from datetime import datetime as dt
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.database import db_session, get_db
@@ -77,6 +77,13 @@ class ChatRequest(BaseModel):
     session_id: str
     message: str
     user_location: LocationInput | None = None
+
+    @field_validator("message")
+    @classmethod
+    def message_must_not_be_empty(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("消息不能为空")
+        return v
 
 
 class RecommendCard(BaseModel):
