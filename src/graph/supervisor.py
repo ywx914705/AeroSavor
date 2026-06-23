@@ -177,6 +177,27 @@ async def intent_parser_node(state: dict) -> dict:
         # 城市未知（如"昆山"不在 CITY_CODES）：不再跳过规则，
         # 让 LLM 来决定意图，但把 clean_place 作为上下文
 
+    # 快速规则：社交感谢语（"谢谢"、"好的"、"嗯嗯"等）→ chat 意图
+    # 这必须在 route 规则之前检测，因为"谢谢你的推荐，第一家不错"中包含"第一家"
+    # 但用户意图是感谢而非导航
+    _SOCIAL_PATTERNS = ["谢谢", "感谢", "好的", "嗯嗯", "哈哈", "不用了", "太棒了", "不错"]
+    q_lower = query.strip().lower()
+    for p in _SOCIAL_PATTERNS:
+        if p in q_lower:
+            # 检查是否纯粹是社交感谢，没有明确的导航意图
+            _NAV_PATTERNS = ["怎么去", "怎么走", "导航到", "路线到", "带我去", "送我去"]
+            has_nav = any(n in q_lower for n in _NAV_PATTERNS)
+            if not has_nav:
+                logger.info("intent_parser: rule override ->chat (matched social '%s')", p)
+                return {
+                    "intent": "chat", "chat_type": "social", "search_keywords": [],
+                    "location_hint": None, "price_max": None, "price_min": None,
+                    "feature_requests": [], "need_route": False,
+                    "is_followup": False, "target_poi_name": None, "target_poi_id": None,
+                    "declared_preferences": None,
+                    **_collab_reset_fields(),
+                }
+
     # 快速规则：路线意图（"怎么去第X家"、"去XX"、"导航到XX"）
     # route 意图不应走搜索路径，而是直接从上轮推荐中取目标走路线规划
     _ROUTE_ORDINAL = re.search(r"第([一二三四五1-5])家", query)

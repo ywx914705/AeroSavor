@@ -45,9 +45,24 @@ async def submit_feedback(
     }:
         return {"status": "ignored", "reason": "unknown action"}
 
+    # 验证 session_id 是否存在，不存在则置空（避免外键约束 500）
+    session_uuid = None
+    if req.session_id:
+        try:
+            sid = uuid.UUID(req.session_id)
+            from sqlalchemy import select as sa_select
+            from ..models import Session as SessionModel
+            result = await db.execute(
+                sa_select(SessionModel.id).where(SessionModel.id == sid)
+            )
+            if result.scalar_one_or_none() is not None:
+                session_uuid = sid
+        except (ValueError, Exception):
+            pass  # 无效的 UUID 格式，忽略
+
     inter = Interaction(
         user_id=uuid.UUID(current_user.id),
-        session_id=uuid.UUID(req.session_id) if req.session_id else None,
+        session_id=session_uuid,
         poi_id=req.poi_id,
         poi_name=req.poi_name or "",
         action=req.action,

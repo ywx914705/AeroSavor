@@ -98,11 +98,15 @@ _CUISINE_MAP = {
 
 
 def _extract_cuisine_keywords(user_query: str) -> list[str]:
-    """从用户查询中提取菜系相关的搜索关键词。"""
+    """从用户查询中提取菜系相关的搜索关键词。
+
+    仅当用户明确提到菜系时才返回关键词，否则返回空列表。
+    避免把"有没有便宜点的"这类追问当成菜系关键词。
+    """
     for key, values in _CUISINE_MAP.items():
         if key in user_query:
             return values
-    return [user_query] if user_query else []
+    return []
 
 
 async def rank_node(state: dict) -> dict:
@@ -282,15 +286,24 @@ async def quality_check_node(state: dict) -> dict:
             got = _extract_types_from_pois(pois[:3])
             user_query = state.get("user_query", "")
             prefer = _extract_cuisine_keywords(user_query)
-            msgs.append(make_request_message(
-                from_agent="recommend_agent",
-                to_agent="search_agent",
-                request_type="search",
-                reason=f"菜系不匹配：搜到{got}，但用户要的是{user_query}",
-                priority="high",
-                avoid_types=[t.strip() for t in got.split(",") if t.strip()],
-                prefer_types=prefer,
-            ))
+            # 如果用户追问中没有菜系词（如"有没有便宜点的"），回退到原搜索关键词
+            if not prefer:
+                prefer = list(state.get("search_keywords") or [])[:3]
+            # 如果还是没有，用 got 的同义词（反向：搜到的类型就是可搜的类型）
+            if not prefer:
+                prefer = [t.strip() for t in got.split(",") if t.strip()][:3]
+            # 只在确实有有意义关键词时才委派搜索
+            meaningful = any(kw in _CUISINE_MAP or len(kw) <= 4 for kw in prefer)
+            if meaningful and prefer:
+                msgs.append(make_request_message(
+                    from_agent="recommend_agent",
+                    to_agent="search_agent",
+                    request_type="search",
+                    reason=f"菜系不匹配：搜到{got}，但用户要的是{user_query}",
+                    priority="high",
+                    avoid_types=[t.strip() for t in got.split(",") if t.strip()],
+                    prefer_types=prefer,
+                ))
         elif mismatch == "price_mismatch":
             # 价格不匹配 → 委派 search_agent 调整价格范围
             user_pref = state.get("user_preference") or {}

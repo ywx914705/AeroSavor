@@ -8,7 +8,7 @@ from __future__ import annotations
 import random
 
 from ....core.logging import get_logger
-from ....core.event_bus import push_event, evt_agent_start, evt_agent_done
+from ....core.event_bus import push_event, evt_agent_start, evt_agent_done, evt_agent_degraded
 from ....core.product_identity import (
     PRODUCT_IDENTITY,
     GREETING_RESPONSE,
@@ -324,12 +324,12 @@ async def generate_chat_node(state: dict) -> dict:
 
     chat_prompt = state.get("chat_prompt", "")
     if not chat_prompt:
-        await push_event(session_id, evt_agent_done("chat_agent", "回复已生成"))
+        await push_event(session_id, evt_agent_degraded("chat_agent", "回复已生成（兜底）", "无有效 prompt"))
         return {"final_response": _get_fallback(chat_type), "chat_prompt": None}
 
     llm = _get_llm()
     if llm is None:
-        await push_event(session_id, evt_agent_done("chat_agent", "回复已生成（兜底）"))
+        await push_event(session_id, evt_agent_degraded("chat_agent", "回复已生成（兜底）", "LLM 不可用"))
         return {"final_response": _get_fallback(chat_type), "chat_prompt": None}
 
     try:
@@ -341,7 +341,7 @@ async def generate_chat_node(state: dict) -> dict:
         content = result.content.strip() if hasattr(result, "content") else str(result).strip()
 
         if not content:
-            await push_event(session_id, evt_agent_done("chat_agent", "回复已生成（兜底）"))
+            await push_event(session_id, evt_agent_degraded("chat_agent", "回复已生成（兜底）", "LLM 返回空"))
             return {"final_response": _get_fallback(chat_type), "chat_prompt": None}
 
         # 截断修复：末尾缺少标点时补上，不再丢弃整段回复
@@ -360,10 +360,10 @@ async def generate_chat_node(state: dict) -> dict:
 
         # 校验失败（否认身份）→ 兜底
         logger.info("generate_chat: validation failed for %s. LLM said: %s", chat_type, content[:80])
-        await push_event(session_id, evt_agent_done("chat_agent", "回复已生成（兜底）"))
+        await push_event(session_id, evt_agent_degraded("chat_agent", "回复已生成（兜底）", "身份否认校验失败"))
         return {"final_response": _get_fallback(chat_type), "chat_prompt": None}
 
     except Exception as e:
         logger.warning("generate_chat_node LLM failed: %s (query=%s)", e, user_query[:30])
-        await push_event(session_id, evt_agent_done("chat_agent", "回复已生成（兜底）"))
+        await push_event(session_id, evt_agent_degraded("chat_agent", "回复已生成（兜底）", f"LLM 异常: {e}"))
         return {"final_response": _get_fallback(chat_type), "chat_prompt": None}

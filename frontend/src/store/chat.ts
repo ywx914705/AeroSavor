@@ -159,12 +159,31 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   setFavoriteIds: (ids) => set({ favoriteIds: ids }),
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   addThinkingStep: (step) => set((s) => {
+    const steps = [...s.thinkingSteps]
+
     // 如果同 agentKey 已有 "running" 状态的步骤，先将其标记为 done（避免重复 running 残留）
-    const steps = s.thinkingSteps.map((st) =>
-      st.agentKey === step.agentKey && st.status === "running"
-        ? { ...st, status: "done" as const, message: st.message + "（重试）", duration: st.startTime ? Date.now() - st.startTime : undefined }
-        : st
-    )
+    for (let i = 0; i < steps.length; i++) {
+      if (steps[i].agentKey === step.agentKey && steps[i].status === "running") {
+        const st = steps[i]
+        steps[i] = {
+          ...st,
+          status: "done" as const,
+          message: st.message + "（重试）",
+          duration: st.startTime ? Date.now() - st.startTime : undefined,
+        }
+      }
+    }
+
+    // 去重：如果最后一条同 agentKey 步骤的状态和新步骤相同，合并而非追加
+    let lastIdx = -1
+    for (let i = steps.length - 1; i >= 0; i--) {
+      if (steps[i].agentKey === step.agentKey) { lastIdx = i; break }
+    }
+    if (lastIdx !== -1 && steps[lastIdx].status === step.status && steps[lastIdx].message === step.message) {
+      // 完全重复，跳过
+      return { thinkingSteps: steps }
+    }
+
     return { thinkingSteps: [...steps, { ...step, startTime: step.startTime || Date.now() }] }
   }),
   updateThinkingStep: (agentKey: string, update: Partial<ThinkingStep>) => set((s) => {
