@@ -243,7 +243,9 @@ async def intent_parser_node(state: dict) -> dict:
         content = await llm.ainvoke(
             INTENT_PARSER_PROMPT.format(
                 history=history, query=query, prev_context=prev_ctx
-            )
+            ),
+            max_tokens=200,   # 意图识别只需返回50字JSON，不需要2000
+            temperature=0.1,  # 低温度保证输出稳定
         )
         if not content:
             # LLM 返回空（限流/超时等），走规则降级

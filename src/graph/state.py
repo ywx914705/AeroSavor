@@ -55,6 +55,9 @@ class SupervisorState(TypedDict):
     chat_prompt: Optional[str]               # ChatAgent → 供 SSE 流式路径复用
     show_cold_start_guide: bool
 
+    # ── 控制标志 ────────────────────────────────
+    stream_chat_response: bool                  # SSE 端点设 True → chat agent 只准备 prompt 不调 LLM
+
     # ── Multi-Agent 协作字段 ────────────────────
     agent_messages: Annotated[list, add]      # Agent 间通信消息（自动追加不覆盖）
     completed_steps: Annotated[list, add]     # 已完成步骤记录
@@ -125,4 +128,5 @@ def make_initial_state(
         "pending_request_for_recommend_agent": None,
         "pending_request_for_location_agent": None,
         "delegation_count": 0,
+        "stream_chat_response": False,
     }
