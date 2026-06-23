@@ -121,7 +121,8 @@ async def intent_parser_node(state: dict) -> dict:
     logger.info("intent_parser: prev_ctx=%s recs=%d", bool(prev), len((prev or {}).get("recommendations", [])))
 
     # 快速规则：明确是闲聊追问的query，直接返回chat意图
-    _CHAT_PATTERNS = ["我在哪", "我在哪个城市", "你记得", "我之前说", "我刚才说", "我告诉过你"]
+    _CHAT_PATTERNS = ["我在哪", "我在哪个城市", "你记得", "我之前说", "我刚才说", "我告诉过你",
+                      "你怎么知道", "你怎么了解", "你怎么会知道", "你怎么清楚", "你怎么明白"]
     for p in _CHAT_PATTERNS:
         if p in query:
             return {
