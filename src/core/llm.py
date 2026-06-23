@@ -78,6 +78,10 @@ class ClaudeClient:
             "temperature": temperature,
             "messages": messages,
         }
+        # 禁用 extended thinking：部分兼容代理（如小米 mimo）默认开启 thinking，
+        # thinking 会消耗 max_tokens 预算导致 text 输出为空
+        if temperature > 0:
+            body["thinking"] = {"type": "disabled"}
         url = f"{self.base_url}/v1/messages"
 
         last_error: Exception | None = None
@@ -96,6 +100,11 @@ class ClaudeClient:
                 return ""
             except httpx.HTTPStatusError as e:
                 status_code = e.response.status_code
+                # thinking 参数不被代理支持 → 去掉后重试
+                if status_code == 400 and "thinking" in body and attempt < MAX_RETRIES:
+                    body.pop("thinking", None)
+                    logger.warning("claude thinking param rejected, retrying without it")
+                    continue
                 if status_code in RETRYABLE_STATUS and attempt < MAX_RETRIES:
                     logger.warning("claude HTTP %d (retryable) attempt %d/%d", status_code, attempt + 1, MAX_RETRIES + 1)
                     await asyncio.sleep(INITIAL_BACKOFF * (2 ** attempt))
@@ -170,6 +179,9 @@ class ClaudeClient:
             "stream": True,
             "messages": messages,
         }
+        # 禁用 extended thinking（同 ainvoke）
+        if temperature > 0:
+            body["thinking"] = {"type": "disabled"}
         url = f"{self.base_url}/v1/messages"
 
         async with self._http.stream(
