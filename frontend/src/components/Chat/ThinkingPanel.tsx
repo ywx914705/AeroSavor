@@ -163,15 +163,19 @@ export function ThinkingPanel() {
   const lastRunning = [...thinkingSteps].reverse().find((s) => s.status === "running")
 
   return (
-    <div className="mb-6 animate-reveal-blur">
-      {/* Main card */}
-      <div className={`relative overflow-hidden rounded-2xl
-        ${hasError
+    <div className="mb-6">
+      {/* 主卡片：使用 opacity + translate 做进出动画，不改变占位高度 */}
+      <div className={`relative overflow-hidden rounded-2xl transition-opacity duration-500 ${
+        !thinkingVisible || thinkingSteps.length === 0
+          ? "opacity-0 max-h-0 pointer-events-none"
+          : "opacity-100 animate-reveal-blur"
+      } ${
+        hasError
           ? "bg-white border-2 border-red-200/60 shadow-lg shadow-red-100/30"
           : runningCount > 0
           ? "bg-white border-2 border-amber-200/50 shadow-lg shadow-amber-100/30"
           : "bg-white border border-emerald-200/40 shadow-md shadow-emerald-100/20"
-        }`}>
+      }`}>
 
         {/* Animated gradient top bar */}
         <div className={`h-1 w-full ${

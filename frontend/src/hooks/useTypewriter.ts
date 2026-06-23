@@ -8,7 +8,7 @@ import { useState, useEffect, useRef } from "react"
  *
  * - 已显示的部分立即保持（不重置）
  * - 新增长的文本按 ~50 字符/秒的速度逐步显示
- * - 打字期间每次 tick 会更新 state，触发组件重渲染
+ * - 使用 RAF + 节流（~30fps）避免高频重渲染导致的布局抖动
  */
 export function useTypewriter(fullText: string) {
   const [displayed, setDisplayed] = useState(fullText)
@@ -16,6 +16,7 @@ export function useTypewriter(fullText: string) {
   const revealedRef = useRef(fullText.length)
   const rafRef = useRef<number | null>(null)
   const speedRef = useRef(50) // chars/sec
+  const lastRenderRef = useRef(0) // 上次触发 setState 的时间戳
 
   useEffect(() => {
     const newLen = fullText.length
@@ -26,6 +27,7 @@ export function useTypewriter(fullText: string) {
       setDisplayed(fullText)
       revealedRef.current = newLen
       prevLenRef.current = newLen
+      lastRenderRef.current = performance.now()
       return
     }
 
@@ -42,11 +44,14 @@ export function useTypewriter(fullText: string) {
       setDisplayed("")
       revealedRef.current = 0
       prevLenRef.current = 0
+      lastRenderRef.current = performance.now()
     }
   }, [fullText])
 
   useEffect(() => {
     let lastTime: number | null = null
+    const RENDER_INTERVAL = 33 // ~30fps，减少重渲染频率防抖动
+
     const tick = (time: number) => {
       if (lastTime === null) lastTime = time
       const dt = (time - lastTime) / 1000
@@ -55,16 +60,18 @@ export function useTypewriter(fullText: string) {
       const target = fullText.length
       const current = revealedRef.current
 
-      if (current >= target) {
-        // Caught up — keep polling in case more text arrives
-        rafRef.current = requestAnimationFrame(tick)
-        return
-      }
+      if (current < target) {
+        const step = Math.max(1, Math.round(speedRef.current * dt))
+        const next = Math.min(current + step, target)
+        revealedRef.current = next
 
-      const step = Math.max(1, Math.round(speedRef.current * dt))
-      const next = Math.min(current + step, target)
-      revealedRef.current = next
-      setDisplayed(fullText.slice(0, next))
+        // 节流：只在间隔足够时才触发 React 重渲染
+        const elapsed = time - lastRenderRef.current
+        if (elapsed >= RENDER_INTERVAL || next >= target) {
+          setDisplayed(fullText.slice(0, next))
+          lastRenderRef.current = time
+        }
+      }
 
       rafRef.current = requestAnimationFrame(tick)
     }

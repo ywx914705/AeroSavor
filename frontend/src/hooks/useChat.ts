@@ -208,8 +208,9 @@ export function useChat() {
         })
         // Single batched update — avoid O(n) re-renders
         useChatStore.setState({ thinkingSteps: updates })
+        // 先隐藏思考面板，再结束 streaming —— 防止 "协同运行中" 残留
+        setThinkingVisible(false)
         setStreaming(false)
-        setTimeout(() => setThinkingVisible(false), 8000)
       }
     },
     [

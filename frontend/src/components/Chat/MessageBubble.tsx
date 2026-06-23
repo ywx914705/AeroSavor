@@ -122,7 +122,7 @@ export function MessageBubble({ msg }: { msg: ChatMessage }) {
 
       {/* Bubble */}
       <div
-        className={`inline-block text-left max-w-[88%] md:max-w-[78%] transition-all duration-500 ${
+        className={`inline-block text-left max-w-[88%] md:max-w-[78%] min-h-[52px] transition-all duration-500 ${
           isUser
             ? "bg-gradient-to-br from-slate-800 via-slate-800 to-slate-900 text-white rounded-[20px] rounded-tr-md px-5 py-3.5 shadow-xl shadow-slate-900/10"
             : `bg-white rounded-[20px] rounded-tl-md px-5 py-3.5 border border-slate-100/70 shadow-md shadow-slate-100/40
