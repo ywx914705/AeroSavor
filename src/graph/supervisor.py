@@ -152,22 +152,25 @@ async def intent_parser_node(state: dict) -> dict:
 
     # 快速规则：否定句式（"不想吃火锅"、"不要烧烤"、"别推荐日料"等）
     # 分两种情况：
-    # 1. 只否定没肯定（"不想吃火锅"）→ clarify，问用户想吃什么
+    # 1. 只否定没肯定（"不想吃火锅"、"别推荐烧烤了"）→ clarify，问用户想吃什么
     # 2. 有否定也有肯定（"不想吃火锅，想吃烧烤"）→ search，用肯定的关键词
     _NEGATIVE_PATTERN = re.search(r"不[想爱吃要]|不要|别[给推荐]|不想|不爱", query)
     if _NEGATIVE_PATTERN:
-        # 提取否定的菜系
+        # 提取肯定的菜系：检查query中逗号/分号后面的部分是否有菜系词
+        # 逻辑：如果用户用了"不想吃X，想吃Y"这种句式，逗号后面的才是肯定
+        # 如果没有逗号分隔，则全是否定，没有肯定
+        parts = re.split(r"[，；,;]", query)
         negated_cuisines = []
-        for kw in _FOOD_KEYWORDS:
-            if kw in query:
-                negated_cuisines.append(kw)
-
-        # 提取肯定的菜系（去掉否定词后的部分）
-        _AFFIRM_WORDS = ["想", "要", "爱", "吃", "来点", "就吃", "换"]
-        has_affirm = any(w in query for w in _AFFIRM_WORDS)
-        # 去掉否定部分后看是否还有菜系词
-        clean_query = re.sub(r"不[想爱吃要].{0,4}", "", query)
-        affirm_cuisines = [kw for kw in _FOOD_KEYWORDS if kw in clean_query]
+        affirm_cuisines = []
+        _NEG_WORDS = re.compile(r"不[想爱吃要]|不要|别[给推荐]|不想|不爱")
+        for part in parts:
+            is_neg = bool(_NEG_WORDS.search(part))
+            for kw in _FOOD_KEYWORDS:
+                if kw in part:
+                    if is_neg:
+                        negated_cuisines.append(kw)
+                    else:
+                        affirm_cuisines.append(kw)
 
         if negated_cuisines:
             if affirm_cuisines:
