@@ -26,9 +26,9 @@ if settings.LANGCHAIN_TRACING_V2 and settings.LANGCHAIN_API_KEY:
         logger.warning("langsmith not installed, tracing disabled")
 
 # 重试配置
-MAX_RETRIES = 3
+MAX_RETRIES = 2  # 减少重试次数，避免总耗时过长（30s * 3 = 90s 最差）
 RETRYABLE_STATUS = {429, 500, 502, 503, 504}
-INITIAL_BACKOFF = 1.0  # 秒
+INITIAL_BACKOFF = 0.5  # 秒，缩短退避时间
 
 
 class ClaudeClient:
@@ -37,7 +37,7 @@ class ClaudeClient:
         api_key: str,
         base_url: str | None = None,
         model: str = "claude-sonnet-4-6",
-        timeout: float = 120.0,
+        timeout: float = 30.0,
     ):
         self.api_key = api_key
         self.model = model

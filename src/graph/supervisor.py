@@ -243,6 +243,46 @@ async def intent_parser_node(state: dict) -> dict:
         # 城市未知（如"昆山"不在 CITY_CODES）：不再跳过规则，
         # 让 LLM 来决定意图，但把 clean_place 作为上下文
 
+    # 快速规则：追问/澄清句式（"有没有便宜点的"、"更近的"、"换一家"等）
+    # 无上轮推荐时 → clarify，引导用户说出具体需求
+    # 有上轮推荐时 → search，用上轮关键词+新偏好重搜
+    _FOLLOWUP_PATTERNS = re.compile(
+        r"有没有.{0,4}点的|更(便宜|近|好|近)的|换(一)?家|还有没有|再(推荐|搜|找)|"
+        r"便宜点|贵一点|高档点|近一点|远一点|其他|别的|不同"
+    )
+    if _FOLLOWUP_PATTERNS.search(query):
+        prev_recs = (prev or {}).get("recommendations") or []
+        if prev_recs:
+            # 有上轮推荐 → search，复用上轮关键词
+            prev_kw = (prev or {}).get("keywords", [])
+            # 提取价格偏好
+            price_max = None
+            if "便宜" in query or "平价" in query or "实惠" in query:
+                price_max = 80
+            elif "贵" in query or "高档" in query:
+                price_max = None  # 不限制上限
+            logger.info("intent_parser: followup rule with prev context, kw=%s price_max=%s", prev_kw, price_max)
+            return {
+                "intent": "search", "search_keywords": prev_kw or ["美食"],
+                "location_hint": (prev or {}).get("location_hint"),
+                "price_max": price_max, "price_min": None,
+                "feature_requests": [], "need_route": False,
+                "is_followup": True, "target_poi_name": None, "target_poi_id": None,
+                "declared_preferences": {"price_max": price_max} if price_max else None,
+                **_collab_reset_fields(),
+            }
+        else:
+            # 无上轮推荐 → clarify，问用户想吃什么
+            logger.info("intent_parser: followup rule without prev context -> clarify")
+            return {
+                "intent": "clarify", "chat_type": "chat", "search_keywords": [],
+                "location_hint": None, "price_max": None, "price_min": None,
+                "feature_requests": [], "need_route": False,
+                "is_followup": False, "target_poi_name": None, "target_poi_id": None,
+                "declared_preferences": None,
+                **_collab_reset_fields(),
+            }
+
     # 快速规则：社交感谢语（"谢谢"、"好的"、"嗯嗯"等）→ chat 意图
     # 这必须在 route 规则之前检测，因为"谢谢你的推荐，第一家不错"中包含"第一家"
     # 但用户意图是感谢而非导航
@@ -327,12 +367,16 @@ async def intent_parser_node(state: dict) -> dict:
         return _rule_based_intent(query)
 
     try:
-        content = await llm.ainvoke(
-            INTENT_PARSER_PROMPT.format(
-                history=history, query=query, prev_context=prev_ctx
+        # 意图解析只需要几秒，限制15秒超时避免长时间等待
+        content = await asyncio.wait_for(
+            llm.ainvoke(
+                INTENT_PARSER_PROMPT.format(
+                    history=history, query=query, prev_context=prev_ctx
+                ),
+                max_tokens=200,   # 意图识别只需返回50字JSON，不需要2000
+                temperature=0.1,  # 低温度保证输出稳定
             ),
-            max_tokens=200,   # 意图识别只需返回50字JSON，不需要2000
-            temperature=0.1,  # 低温度保证输出稳定
+            timeout=15.0,
         )
         if not content:
             # LLM 返回空（限流/超时等），走规则降级
@@ -477,8 +521,115 @@ _GENERIC_FOOD_PATTERNS = [
 
 
 def _rule_based_intent(query: str) -> dict:
-    """LLM 不可用时，从原句中用规则提取搜索关键词、位置和价格。"""
+    """LLM 不可用时，从原句中用规则提取搜索关键词、位置和价格。
+
+    降级时也要识别闲聊/身份/问候，避免把"你好"当search。
+    """
     import re
+
+    q_lower = query.strip().lower()
+
+    # ── 闲聊/身份/问候检测（降级时也要正确识别） ──
+    _GREETING_PATS = ["你好", "嗨", "hi", "hello", "hey", "在吗",
+                      "早上好", "中午好", "下午好", "晚上好", "早啊", "哈喽"]
+    _IDENTITY_PATS = ["你是谁", "你叫什么", "你是什么", "你是哪", "谁开发的",
+                      "谁做的", "介绍一下你", "你是干嘛的", "你干什么的"]
+    _FEATURE_PATS = ["你能做什么", "你有什么功能", "你有什么用",
+                     "都有哪些功能", "有哪些功能", "你能干嘛", "你会什么", "你都能做什么"]
+    _SOCIAL_PATS = ["谢谢", "感谢", "好的", "嗯嗯", "哈哈", "不用了", "太棒了", "不错"]
+
+    for p in _GREETING_PATS:
+        if p in q_lower and len(q_lower) <= 8:
+            return {
+                "intent": "chat", "chat_type": "greeting", "search_keywords": [],
+                "location_hint": None, "price_max": None, "price_min": None,
+                "feature_requests": [], "need_route": False,
+                "is_followup": False, "target_poi_name": None, "target_poi_id": None,
+                "declared_preferences": None,
+                **_collab_reset_fields(),
+            }
+    for p in _IDENTITY_PATS:
+        if p in q_lower:
+            return {
+                "intent": "chat", "chat_type": "identity", "search_keywords": [],
+                "location_hint": None, "price_max": None, "price_min": None,
+                "feature_requests": [], "need_route": False,
+                "is_followup": False, "target_poi_name": None, "target_poi_id": None,
+                "declared_preferences": None,
+                **_collab_reset_fields(),
+            }
+    for p in _FEATURE_PATS:
+        if p in q_lower:
+            return {
+                "intent": "chat", "chat_type": "feature", "search_keywords": [],
+                "location_hint": None, "price_max": None, "price_min": None,
+                "feature_requests": [], "need_route": False,
+                "is_followup": False, "target_poi_name": None, "target_poi_id": None,
+                "declared_preferences": None,
+                **_collab_reset_fields(),
+            }
+    for p in _SOCIAL_PATS:
+        if p in q_lower:
+            _NAV_PATTERNS = ["怎么去", "怎么走", "导航到", "路线到", "带我去", "送我去"]
+            has_nav = any(n in q_lower for n in _NAV_PATTERNS)
+            if not has_nav:
+                return {
+                    "intent": "chat", "chat_type": "social", "search_keywords": [],
+                    "location_hint": None, "price_max": None, "price_min": None,
+                    "feature_requests": [], "need_route": False,
+                    "is_followup": False, "target_poi_name": None, "target_poi_id": None,
+                    "declared_preferences": None,
+                    **_collab_reset_fields(),
+                }
+
+    # 追问/澄清句式检测（降级时也要正确处理）
+    _FOLLOWUP_PATTERNS = re.compile(
+        r"有没有.{0,4}点的|更(便宜|近|好|近)的|换(一)?家|还有没有|再(推荐|搜|找)|"
+        r"便宜点|贵一点|高档点|近一点|远一点|其他|别的|不同"
+    )
+    if _FOLLOWUP_PATTERNS.search(query):
+        # 无上轮上下文 → clarify，引导用户说出具体需求
+        return {
+            "intent": "clarify", "chat_type": "chat", "search_keywords": [],
+            "location_hint": None, "price_max": None, "price_min": None,
+            "feature_requests": [], "need_route": False,
+            "is_followup": False, "target_poi_name": None, "target_poi_id": None,
+            "declared_preferences": None,
+            **_collab_reset_fields(),
+        }
+
+    # 否定句检测（降级时也要正确处理）
+    _NEG_WORDS = re.compile(r"不[想爱吃要]|不要|别[给推荐]|不想|不爱")
+    if _NEG_WORDS.search(query):
+        parts = re.split(r"[，；,;]", query)
+        negated_cuisines = []
+        affirm_cuisines = []
+        for part in parts:
+            is_neg = bool(_NEG_WORDS.search(part))
+            for kw in _FOOD_KEYWORDS:
+                if kw in part:
+                    if is_neg:
+                        negated_cuisines.append(kw)
+                    else:
+                        affirm_cuisines.append(kw)
+        if negated_cuisines and not affirm_cuisines:
+            return {
+                "intent": "clarify", "chat_type": "negative_only", "search_keywords": [],
+                "location_hint": None, "price_max": None, "price_min": None,
+                "feature_requests": [], "need_route": False,
+                "is_followup": False, "target_poi_name": None, "target_poi_id": None,
+                "declared_preferences": {"disliked": negated_cuisines},
+                **_collab_reset_fields(),
+            }
+        if affirm_cuisines:
+            return {
+                "intent": "search", "search_keywords": affirm_cuisines,
+                "location_hint": None, "price_max": None, "price_min": None,
+                "feature_requests": [], "need_route": False,
+                "is_followup": False, "target_poi_name": None, "target_poi_id": None,
+                "declared_preferences": {"disliked": negated_cuisines, "preferred": affirm_cuisines},
+                **_collab_reset_fields(),
+            }
 
     keywords: list[str] = []
     for kw in _FOOD_KEYWORDS:
@@ -530,6 +681,7 @@ def _rule_based_intent(query: str) -> dict:
         "search_retry_count": 0,
         "is_followup": False,
         "target_poi_name": None,
+        "target_poi_id": None,
         "declared_preferences": declared_prefs,
         **_collab_reset_fields(),
     }
@@ -822,8 +974,9 @@ async def recommend_node(state: dict) -> dict:
         return {"recommendations": recs, "final_response": ""}
 
     try:
-        content = await llm.ainvoke(
-            RECOMMENDER_PROMPT.format(
+        content = await asyncio.wait_for(
+            llm.ainvoke(
+                RECOMMENDER_PROMPT.format(
                 user_query=state.get("user_query", ""),
                 weather=f"{weather.get('weather','未知')} {weather.get('temperature','')}°C",
                 user_preference=(
@@ -834,6 +987,8 @@ async def recommend_node(state: dict) -> dict:
                 pois=json.dumps(top5, ensure_ascii=False, indent=2),
             ),
             system_prompt=AEROSAVOR_SYSTEM_PROMPT,
+        ),
+            timeout=30.0,
         )
         parsed = _parse_json_safely(content)
     except Exception as e:
@@ -1232,18 +1387,21 @@ async def supervisor_decision_node(state: dict) -> dict:
         }
 
     try:
-        content = await llm.ainvoke(
-            SUPERVISOR_DECISION_PROMPT.format(
-                user_query=user_query,
-                completed_steps=", ".join(state.get("completed_steps", []) or []),
-                iteration_count=iteration_count,
-                max_iterations=MAX_ITERATIONS,
-                agent_messages=msg_text,
-                poi_count=len(state.get("filtered_pois", [])),
-                keywords=", ".join(state.get("search_keywords", [])),
-                location=state.get("resolved_location") or state.get("location_hint") or "未知",
+        content = await asyncio.wait_for(
+            llm.ainvoke(
+                SUPERVISOR_DECISION_PROMPT.format(
+                    user_query=user_query,
+                    completed_steps=", ".join(state.get("completed_steps", []) or []),
+                    iteration_count=iteration_count,
+                    max_iterations=MAX_ITERATIONS,
+                    agent_messages=msg_text,
+                    poi_count=len(state.get("filtered_pois", [])),
+                    keywords=", ".join(state.get("search_keywords", [])),
+                    location=state.get("resolved_location") or state.get("location_hint") or "未知",
+                ),
+                max_tokens=300,
             ),
-            max_tokens=300,
+            timeout=15.0,
         )
         decision = _parse_json_safely(content)
     except Exception as e:

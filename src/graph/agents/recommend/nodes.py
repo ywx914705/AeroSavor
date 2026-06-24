@@ -4,6 +4,7 @@
 质量差时向 Supervisor 发送 feedback 消息，触发重搜。
 """
 from __future__ import annotations
+import asyncio
 import json
 from ....core.logging import get_logger
 from ....core.event_bus import push_event, evt_agent_start, evt_agent_done
@@ -253,13 +254,15 @@ async def quality_check_node(state: dict) -> dict:
             }
 
     try:
-        content = await llm.ainvoke(
-            QUALITY_CHECK_PROMPT.format(
-                user_query=state.get("user_query", ""),
-                user_preference=pref_text,
-                poi_list=poi_list,
+        content = await asyncio.wait_for(
+            llm.ainvoke(
+                QUALITY_CHECK_PROMPT.format(
+                    user_query=state.get("user_query", ""),
+                    poi_list=poi_list,
+                ),
+                max_tokens=200,
             ),
-            max_tokens=200,
+            timeout=10.0,
         )
         assessment = _parse_json_safely(content)
     except Exception as e:
@@ -383,18 +386,21 @@ async def llm_recommend_node(state: dict) -> dict:
         return {"recommendations": recs, "final_response": ""}
 
     try:
-        content = await llm.ainvoke(
-            RECOMMENDER_PROMPT.format(
-                user_query=state.get("user_query", ""),
+        content = await asyncio.wait_for(
+            llm.ainvoke(
+                RECOMMENDER_PROMPT.format(
+                    user_query=state.get("user_query", ""),
                 weather=f"{weather.get('weather','未知')} {weather.get('temperature','')}°C",
                 user_preference=pref.get("preference_text", "新用户，无历史偏好") if pref else "新用户",
                 pois=json.dumps(top5, ensure_ascii=False, indent=2),
             ),
             system_prompt=AEROSAVOR_SYSTEM_PROMPT,
+        ),
+            timeout=20.0,
         )
         parsed = _parse_json_safely(content)
     except Exception as e:
-        logger.warning("llm_recommend_node failed: %s", e)
+        logger.warning("llm_recommend_node failed: %s, using rule-based fallback", e)
         parsed = {}
 
     recommendations = []
@@ -407,6 +413,18 @@ async def llm_recommend_node(state: dict) -> dict:
                 "reason": rec.get("reason", ""),
                 "highlight": rec.get("highlight", ""),
                 "suitable_for": rec.get("suitable_for", ""),
+            })
+
+    # LLM 失败或解析为空时，走规则兜底：直接用 top5 数据生成推荐
+    if not recommendations:
+        logger.info("llm_recommend_node: no LLM recommendations, using rule-based fallback from top5")
+        for i, p in enumerate(top5[:3]):
+            recommendations.append({
+                **p,
+                "rank": i + 1,
+                "reason": f"评分 {p.get('rating','-')} 分，人均 ¥{p.get('cost','-')}，距离 {p.get('distance','-')}m",
+                "highlight": p.get("type", ""),
+                "suitable_for": "日常用餐",
             })
 
     summary = parsed.get("summary", "")

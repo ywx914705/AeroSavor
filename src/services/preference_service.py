@@ -1,6 +1,7 @@
 """用户偏好服务（向量化 + 结构化）。"""
 from __future__ import annotations
 
+import asyncio
 import uuid
 from typing import Any
 
@@ -74,9 +75,12 @@ async def _summarize_with_llm(records: list[dict]) -> str:
             f"人均¥{r.get('poi_cost','-')}，评分{r.get('poi_rating','-')}）"
             for r in records
         )
-        text = await llm.ainvoke(
-            PREFERENCE_SUMMARY_PROMPT.format(interactions=interaction_text),
-            max_tokens=300,
+        text = await asyncio.wait_for(
+            llm.ainvoke(
+                PREFERENCE_SUMMARY_PROMPT.format(interactions=interaction_text),
+                max_tokens=300,
+            ),
+            timeout=15.0,
         )
         return text.strip() or fallback
     except Exception as e:
@@ -253,12 +257,15 @@ async def _extract_structured_preferences(
                     f"人均¥{r.get('poi_cost','-')}，评分{r.get('poi_rating','-')}）"
                     for r in records
                 )
-                result = await llm.ainvoke(
-                    PREFERENCE_STRUCTURED_PROMPT.format(
-                        preference_text=pref_text,
-                        interactions=interaction_text,
+                result = await asyncio.wait_for(
+                    llm.ainvoke(
+                        PREFERENCE_STRUCTURED_PROMPT.format(
+                            preference_text=pref_text,
+                            interactions=interaction_text,
+                        ),
+                        max_tokens=300,
                     ),
-                    max_tokens=300,
+                    timeout=15.0,
                 )
                 import json
 

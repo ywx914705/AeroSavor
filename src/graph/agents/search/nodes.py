@@ -155,17 +155,20 @@ async def plan_search_node(state: dict) -> dict:
     await push_event(session_id, evt_agent_start("search_agent", "规划搜索策略..."))
 
     try:
-        content = await llm.ainvoke(
-            SEARCH_PLANNING_PROMPT.format(
-                user_query=state.get("user_query", ""),
-                user_preference=str(state.get("user_preference") or "无"),
-                current_keywords=", ".join(current_kw),
-                strategy_hint=str(strategy_hint or "无"),
-                tried_keywords=", ".join(tried_keywords),
-                previous_count=previous_count,
+        content = await asyncio.wait_for(
+            llm.ainvoke(
+                SEARCH_PLANNING_PROMPT.format(
+                    user_query=state.get("user_query", ""),
+                    user_preference=str(state.get("user_preference") or "无"),
+                    current_keywords=", ".join(current_kw),
+                    strategy_hint=str(strategy_hint or "无"),
+                    tried_keywords=", ".join(tried_keywords),
+                    previous_count=previous_count,
+                ),
+                max_tokens=200,
+                temperature=0,
             ),
-            max_tokens=200,
-            temperature=0,
+            timeout=15.0,
         )
         plan = _parse_json_safely(content)
     except Exception as e:

@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+import asyncio
 import random
 
 from ....core.logging import get_logger
@@ -365,10 +366,13 @@ async def generate_chat_node(state: dict) -> dict:
         return {"final_response": _get_fallback(chat_type), "chat_prompt": None}
 
     try:
-        result = await llm.ainvoke(
-            chat_prompt,
-            max_tokens=500,
-            system_prompt=PERSONALITY_PROMPT,
+        result = await asyncio.wait_for(
+            llm.ainvoke(
+                chat_prompt,
+                max_tokens=500,
+                system_prompt=PERSONALITY_PROMPT,
+            ),
+            timeout=20.0,
         )
         content = result.content.strip() if hasattr(result, "content") else str(result).strip()
 

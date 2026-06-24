@@ -78,6 +78,15 @@ class ChatRequest(BaseModel):
     message: str
     user_location: LocationInput | None = None
 
+    @field_validator("session_id")
+    @classmethod
+    def session_id_must_be_uuid(cls, v: str) -> str:
+        try:
+            uuid.UUID(v)
+        except ValueError:
+            raise ValueError("session_id 必须是有效的 UUID 格式")
+        return v
+
     @field_validator("message")
     @classmethod
     def message_must_not_be_empty(cls, v: str) -> str:
@@ -291,14 +300,37 @@ async def chat(
 
     graph = get_graph()
     t0 = time.monotonic()
+    result = None
     try:
-        result = await graph.ainvoke(
-            initial,
-            config={"configurable": {"thread_id": str(session.id)}},
+        result = await asyncio.wait_for(
+            graph.ainvoke(
+                initial,
+                config={"configurable": {"thread_id": str(session.id)}},
+            ),
+            timeout=60.0,
+        )
+    except asyncio.TimeoutError:
+        logger.warning("graph invoke timeout (60s) for session=%s query=%s", session.id, req.message[:30])
+        # 超时时返回兜底响应，而不是硬 504 错误
+        fallback_msg = "抱歉，处理时间过长，请稍后再试。你也可以换个更具体的问题，比如「推荐火锅」或「附近有什么好吃的」 😊"
+        await append_message(db, str(session.id), "assistant", fallback_msg)
+        return ChatResponse(
+            session_id=str(session.id),
+            response=fallback_msg,
+            recommendations=[],
+            route_info=None,
         )
     except Exception as e:
         logger.exception("graph invoke failed: %s", e)
-        raise HTTPException(status_code=500, detail=f"agent error: {e}")
+        # 同样返回兜底响应，避免硬 500 错误
+        fallback_msg = "抱歉，系统出了点问题，请稍后再试 😊"
+        await append_message(db, str(session.id), "assistant", fallback_msg)
+        return ChatResponse(
+            session_id=str(session.id),
+            response=fallback_msg,
+            recommendations=[],
+            route_info=None,
+        )
 
     elapsed = time.monotonic() - t0
     recs = result.get("recommendations") or []
@@ -428,11 +460,16 @@ async def chat_stream(
 
             async def _run_graph():
                 try:
-                    result = await graph.ainvoke(
-                        initial,
-                        config={"configurable": {"thread_id": session_id}},
+                    result = await asyncio.wait_for(
+                        graph.ainvoke(
+                            initial,
+                            config={"configurable": {"thread_id": session_id}},
+                        ),
+                        timeout=120.0,
                     )
                     graph_result_box.append(result)
+                except asyncio.TimeoutError:
+                    graph_result_box.append({"_error": Exception("图执行超时(120s)，请稍后重试")})
                 except Exception as e:
                     graph_result_box.append({"_error": e})
                 finally:

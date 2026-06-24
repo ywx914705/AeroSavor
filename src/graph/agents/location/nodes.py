@@ -6,6 +6,7 @@
 - ip_locate_node: IP 定位兜底
 """
 from __future__ import annotations
+import asyncio
 import json
 import re
 from ....core.config import settings
@@ -135,14 +136,17 @@ async def reason_location_node(state: dict) -> dict:
     await push_event(session_id, evt_agent_start("location_agent", f"推理位置「{location_hint}」..."))
 
     try:
-        content = await llm.ainvoke(
-            LOCATION_REASONING_PROMPT.format(
-                location_hint=location_hint,
-                current_city=current_city,
-                conversation_history=conversation_history,
+        content = await asyncio.wait_for(
+            llm.ainvoke(
+                LOCATION_REASONING_PROMPT.format(
+                    location_hint=location_hint,
+                    current_city=current_city,
+                    conversation_history=conversation_history,
+                ),
+                max_tokens=200,
+                temperature=0,
             ),
-            max_tokens=200,
-            temperature=0,
+            timeout=15.0,
         )
         result = _parse_json_safely(content)
     except Exception as e:
