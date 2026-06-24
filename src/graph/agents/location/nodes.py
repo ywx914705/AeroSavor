@@ -146,7 +146,7 @@ async def reason_location_node(state: dict) -> dict:
                 max_tokens=200,
                 temperature=0,
             ),
-            timeout=15.0,
+            timeout=10.0,
         )
         result = _parse_json_safely(content)
     except Exception as e:

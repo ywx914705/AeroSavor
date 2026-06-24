@@ -307,7 +307,7 @@ async def chat(
                 initial,
                 config={"configurable": {"thread_id": str(session.id)}},
             ),
-            timeout=60.0,
+            timeout=80.0,
         )
     except asyncio.TimeoutError:
         logger.warning("graph invoke timeout (60s) for session=%s query=%s", session.id, req.message[:30])
