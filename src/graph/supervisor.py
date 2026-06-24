@@ -151,7 +151,9 @@ async def intent_parser_node(state: dict) -> dict:
         }
 
     # 快速规则：否定句式（"不想吃火锅"、"不要烧烤"、"别推荐日料"等）
-    # → search意图，但把否定的菜系放入avoid_types避免搜到后重搜循环
+    # 分两种情况：
+    # 1. 只否定没肯定（"不想吃火锅"）→ clarify，问用户想吃什么
+    # 2. 有否定也有肯定（"不想吃火锅，想吃烧烤"）→ search，用肯定的关键词
     _NEGATIVE_PATTERN = re.search(r"不[想爱吃要]|不要|别[给推荐]|不想|不爱", query)
     if _NEGATIVE_PATTERN:
         # 提取否定的菜系
@@ -159,18 +161,40 @@ async def intent_parser_node(state: dict) -> dict:
         for kw in _FOOD_KEYWORDS:
             if kw in query:
                 negated_cuisines.append(kw)
+
+        # 提取肯定的菜系（去掉否定词后的部分）
+        _AFFIRM_WORDS = ["想", "要", "爱", "吃", "来点", "就吃", "换"]
+        has_affirm = any(w in query for w in _AFFIRM_WORDS)
+        # 去掉否定部分后看是否还有菜系词
+        clean_query = re.sub(r"不[想爱吃要].{0,4}", "", query)
+        affirm_cuisines = [kw for kw in _FOOD_KEYWORDS if kw in clean_query]
+
         if negated_cuisines:
-            logger.info("intent_parser: negative rule, disliked=%s", negated_cuisines)
-            # 默认搜索美食，但排除用户不想要的菜系
-            return {
-                "intent": "search", "search_keywords": ["美食"],
-                "location_hint": None, "price_max": None, "price_min": None,
-                "feature_requests": [], "need_route": False,
-                "is_followup": False, "target_poi_name": None, "target_poi_id": None,
-                "declared_preferences": {"disliked": negated_cuisines},
-                "search_strategy_hint": {"avoid_types": negated_cuisines, "prefer_types": [], "reason": "用户明确表示不想吃"},
-                **_collab_reset_fields(),
-            }
+            if affirm_cuisines:
+                # 情况2：有否定也有肯定 → search用肯定的关键词
+                logger.info("intent_parser: negative+affirm rule, disliked=%s prefer=%s", negated_cuisines, affirm_cuisines)
+                return {
+                    "intent": "search", "search_keywords": affirm_cuisines,
+                    "location_hint": None, "price_max": None, "price_min": None,
+                    "feature_requests": [], "need_route": False,
+                    "is_followup": False, "target_poi_name": None, "target_poi_id": None,
+                    "declared_preferences": {"disliked": negated_cuisines, "preferred": affirm_cuisines},
+                    "search_strategy_hint": {"avoid_types": negated_cuisines, "prefer_types": affirm_cuisines, "reason": "用户否定+肯定"},
+                    **_collab_reset_fields(),
+                }
+            else:
+                # 情况1：只有否定没有肯定 → clarify，问用户想吃什么
+                logger.info("intent_parser: negative-only rule, disliked=%s → clarify", negated_cuisines)
+                disliked_str = "、".join(negated_cuisines)
+                return {
+                    "intent": "clarify", "chat_type": "negative_only",
+                    "search_keywords": [],
+                    "location_hint": None, "price_max": None, "price_min": None,
+                    "feature_requests": [], "need_route": False,
+                    "is_followup": False, "target_poi_name": None, "target_poi_id": None,
+                    "declared_preferences": {"disliked": negated_cuisines},
+                    **_collab_reset_fields(),
+                }
 
     # 快速规则：用户声明位置的句式（"我在XX"、"我住XX"、"我在成都"）
     # 增强判断：如果同时包含闲聊成分（"你记住了吗"等），走 chat 意图但透传位置
