@@ -1066,15 +1066,15 @@ async def format_response_node(state: dict) -> dict:
     if intent == "route" and route and not recs:
         dest_name = route.get("destination_name") or state.get("target_poi_name") or "目标餐厅"
         lines.append(f"🗺️ **前往 {dest_name} 的路线**\n")
-        if route.get("walking"):
+        if route.get("walking") and route["walking"].get("duration_min"):
             w = route["walking"]
-            lines.append(f"🚶 步行约{w['duration_min']}分钟（{w['distance_m']}m）")
-        if route.get("driving"):
+            lines.append(f"🚶 步行约{w.get('duration_min','?')}分钟（{w.get('distance_m','?')}m）")
+        if route.get("driving") and route["driving"].get("duration_min"):
             d = route["driving"]
-            lines.append(f"🚗 驾车约{d['duration_min']}分钟")
-        if route.get("transit"):
+            lines.append(f"🚗 驾车约{d.get('duration_min','?')}分钟")
+        if route.get("transit") and route["transit"].get("duration_min"):
             t = route["transit"]
-            lines.append(f"🚌 公交约{t['duration_min']}分钟")
+            lines.append(f"🚌 公交约{t.get('duration_min','?')}分钟")
         lines.append(f"\n[🗺️ 开始导航]({route.get('nav_url','')})")
         await push_event(session_id, evt_agent_done("format_response", "路线已生成"))
         return {"final_response": "\n".join(lines)}
@@ -1129,15 +1129,15 @@ async def format_response_node(state: dict) -> dict:
 
             # 路线信息
             if route and len(recs) == 1:
-                if route.get("walking"):
+                if route.get("walking") and route["walking"].get("duration_min"):
                     w = route["walking"]
-                    lines.append(f"🚶 步行约{w['duration_min']}分钟（{w['distance_m']}m）")
-                if route.get("driving"):
+                    lines.append(f"🚶 步行约{w.get('duration_min','?')}分钟（{w.get('distance_m','?')}m）")
+                if route.get("driving") and route["driving"].get("duration_min"):
                     d = route["driving"]
-                    lines.append(f"🚗 驾车约{d['duration_min']}分钟")
-                if route.get("transit"):
+                    lines.append(f"🚗 驾车约{d.get('duration_min','?')}分钟")
+                if route.get("transit") and route["transit"].get("duration_min"):
                     t = route["transit"]
-                    lines.append(f"🚌 公交约{t['duration_min']}分钟")
+                    lines.append(f"🚌 公交约{t.get('duration_min','?')}分钟")
                 lines.append(f"[🗺️ 开始导航]({route.get('nav_url','')})")
             else:
                 lines.append(f"[查看详情]({rec.get('amap_url','')})")

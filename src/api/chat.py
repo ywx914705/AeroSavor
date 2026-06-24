@@ -546,7 +546,11 @@ async def chat_stream(
 
                 if llm is not None:
                     try:
+                        stream_deadline = time.monotonic() + 30.0
                         async for chunk in llm.astream(prompt, max_tokens=600, system_prompt=AEROSAVOR_SYSTEM_PROMPT):
+                            if time.monotonic() > stream_deadline:
+                                logger.warning("astream summary timeout (30s), using partial result")
+                                break
                             accumulated += chunk
                             streamed = True
                             payload = {
@@ -577,7 +581,11 @@ async def chat_stream(
                     streamed = False
                     if llm is not None:
                         try:
+                            stream_deadline = time.monotonic() + 20.0
                             async for chunk in llm.astream(chat_prompt, max_tokens=500, system_prompt=PERSONALITY_PROMPT):
+                                if time.monotonic() > stream_deadline:
+                                    logger.warning("chat astream timeout (20s), using partial result")
+                                    break
                                 accumulated += chunk
                                 payload = {"type": "response", "content": accumulated}
                                 yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
