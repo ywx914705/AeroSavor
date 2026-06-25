@@ -78,10 +78,7 @@ export function InputBar({ onSend, onStop, disabled }: Props) {
             <div className="flex items-center justify-between px-5 pt-3 pb-1">
               <div className="flex items-center gap-2.5">
                 {isStreaming && (
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
-                  </span>
+                  <span className="inline-flex rounded-full h-2 w-2 bg-amber-400 animate-pulse" />
                 )}
                 <span className="text-[11px] text-slate-400 font-semibold tracking-wide">
                   {isStreaming
@@ -140,8 +137,6 @@ export function InputBar({ onSend, onStop, disabled }: Props) {
                     enabled:active:scale-95
                     enabled:focus:outline-none enabled:focus:ring-2 enabled:focus:ring-amber-300/50 enabled:focus:ring-offset-2"
                 >
-                  {/* Button shimmer */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-200%] enabled:hover:translate-x-[200%] transition-transform duration-1000" />
                   {/* Ripple effects */}
                   {ripples.map((ripple) => (
                     <span

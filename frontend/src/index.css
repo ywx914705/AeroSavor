@@ -445,8 +445,28 @@ html, body, #root {
 .photo-strip { scrollbar-width: none; -ms-overflow-style: none; }
 .photo-strip::-webkit-scrollbar { display: none; }
 
-/* ── Message area smooth scroll ── */
-[role="log"] { scroll-behavior: smooth; }
+/* ── Message area scroll ── */
+/* 流式输出时滚动容器用 instant（见 ChatContent 的 scrollTo），不能再全局强制 smooth：
+   smooth 会与持续增长的内容竞争，导致页面上下抖动/卡动感。仅 ScrollToBottom 按钮用 smooth。 */
+[role="log"] { scroll-behavior: auto; }
+
+/* ── Anti-jitter: scroll container uses instant scroll during streaming ── */
+.chat-scroll-container {
+  overflow-anchor: auto;
+  contain: layout style paint;
+}
+
+/* ── Streaming bubble: 克制边框高亮，不抖 box-shadow ── */
+.streaming-border-active {
+  animation: streaming-border 2s ease-in-out infinite;
+  will-change: border-color;
+}
+
+/* ── Prose content: stable min-height ── */
+.prose-ed {
+  min-height: 1em;
+  word-break: break-word;
+}
 
 /* ── Button base ── */
 .btn-primary {
@@ -1135,51 +1155,42 @@ aside::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
   border-color: rgba(148, 163, 184, 0.4);
 }
 
-/* ── Streaming Pulse Border ── */
+/* ── Streaming Border — 克制高亮，不抖 box-shadow ── */
 @keyframes streaming-border {
   0%, 100% {
-    border-color: rgba(148, 163, 184, 0.3);
-    box-shadow: 0 0 12px rgba(148, 163, 184, 0.1);
+    border-color: rgba(245, 158, 11, 0.25);
   }
   50% {
-    border-color: rgba(148, 163, 184, 0.5);
-    box-shadow: 0 0 24px rgba(148, 163, 184, 0.15);
+    border-color: rgba(245, 158, 11, 0.5);
   }
 }
-.streaming-border-active {
-  animation: streaming-border 1.5s ease-in-out infinite;
-}
 
-/* ── Message Bubble Transitions ── */
+/* ── Message Bubble Transitions — 无 blur（blur 是卡顿感来源）,缩到 0.35s ── */
 @keyframes msg-glide-in-left {
   from {
     opacity: 0;
-    transform: translateX(-20px) translateY(10px) scale(0.95);
-    filter: blur(4px);
+    transform: translateX(-12px) translateY(6px);
   }
   to {
     opacity: 1;
-    transform: translateX(0) translateY(0) scale(1);
-    filter: blur(0);
+    transform: translateX(0) translateY(0);
   }
 }
 @keyframes msg-glide-in-right {
   from {
     opacity: 0;
-    transform: translateX(20px) translateY(10px) scale(0.95);
-    filter: blur(4px);
+    transform: translateX(12px) translateY(6px);
   }
   to {
     opacity: 1;
-    transform: translateX(0) translateY(0) scale(1);
-    filter: blur(0);
+    transform: translateX(0) translateY(0);
   }
 }
 .msg-glide-left {
-  animation: msg-glide-in-left 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: msg-glide-in-left 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .msg-glide-right {
-  animation: msg-glide-in-right 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: msg-glide-in-right 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* ── Typing Indicator Enhanced ── */
@@ -1590,7 +1601,7 @@ aside::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
   z-index: 50;
   opacity: 0.025;
   mix-blend-mode: overlay;
-  animation: grainDrift 0.5s steps(1) infinite;
+  will-change: auto;
 }
 @keyframes grainDrift {
   0%, 100% { transform: translate(0, 0); }

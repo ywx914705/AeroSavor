@@ -3,7 +3,6 @@ import { useChat } from "../../hooks/useChat"
 import { useChatStore } from "../../store/chat"
 import { MessageBubble } from "./MessageBubble"
 import { InputBar } from "./InputBar"
-import { ThinkingPanel } from "./ThinkingPanel"
 import { CardStack } from "../Restaurant/CardStack"
 import { RoutePanel } from "../Restaurant/RoutePanel"
 import { MapView } from "../Map/MapView"
@@ -153,14 +152,14 @@ function ChatContent() {
   }, [])
 
   // Auto-scroll only when user is near the bottom
+  // 使用 instant 滚动避免 smooth 动画与内容增长竞争导致抖动
   useEffect(() => {
     const el = scrollRef.current
     if (!el || userScrolledUp.current) return
     const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 200
     if (isNearBottom) {
-      requestAnimationFrame(() => {
-        el.scrollTo({ top: el.scrollHeight })
-      })
+      // 用 instant 而非 smooth：流式输出时内容持续增长，smooth 滚动会跟不上
+      el.scrollTo({ top: el.scrollHeight, behavior: "instant" })
     }
   }, [messages.length, lastMsgLen, recommendations.length])
 
@@ -195,7 +194,7 @@ function ChatContent() {
       <div className="flex-1 flex flex-col min-w-0 bg-transparent">
         <CenterTopBar />
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto relative" role="log">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto relative overflow-y-anchor-bottom chat-scroll-container" role="log">
           {hasContent ? (
             <div className="px-5 md:px-8 py-5 md:py-8">
               <div className="max-w-2xl mx-auto">
@@ -203,11 +202,8 @@ function ChatContent() {
                   <MessageBubble key={m.id} msg={m} />
                 ))}
 
-                {/* Agent thinking process - inline in chat */}
-                <ThinkingPanel />
-
                 {recommendations.length > 0 && (
-                  <div className="mt-8 mb-6 animate-reveal-blur">
+                  <div className="mt-8 mb-6 animate-fade-up">
                     <MapView
                       restaurants={recommendations.slice(0, 5)}
                       center={recommendations[0]?.location}
@@ -216,7 +212,7 @@ function ChatContent() {
                 )}
 
                 {routeInfo && (
-                  <div className="animate-reveal-blur">
+                  <div className="animate-fade-up">
                     <RoutePanel route={routeInfo} destinationName={routeInfo.destination_name} />
                   </div>
                 )}

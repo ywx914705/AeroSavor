@@ -1,3 +1,4 @@
+import { memo } from "react"
 import type { Restaurant } from "../../api/client"
 import { RecommendCard } from "./RecommendCard"
 
@@ -9,7 +10,7 @@ interface Props {
   favoriteIds: Set<string>
 }
 
-export function CardStack({
+function CardStackInner({
   restaurants,
   sessionId,
   onFeedback,
@@ -64,6 +65,17 @@ export function CardStack({
     </section>
   )
 }
+
+/** memo 化：推荐列表和收藏状态不变时跳过重渲 */
+export const CardStack = memo(CardStackInner, (prev, next) => {
+  if (prev.restaurants.length !== next.restaurants.length) return false
+  if (prev.favoriteIds !== next.favoriteIds) return false
+  // 浅比 restaurants id 列表
+  for (let i = 0; i < prev.restaurants.length; i++) {
+    if (prev.restaurants[i].id !== next.restaurants[i].id) return false
+  }
+  return true
+})
 
 /** Empty results state */
 export function EmptyResults({ onRetry }: { onRetry: (query: string) => void }) {

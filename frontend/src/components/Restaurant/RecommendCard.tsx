@@ -1,4 +1,4 @@
-import { useRef, useCallback, useState, useEffect, type MouseEvent } from "react"
+import { memo, useRef, useCallback, useState, useEffect, type MouseEvent } from "react"
 import type { Restaurant } from "../../api/client"
 
 interface Props {
@@ -37,7 +37,7 @@ function CountUpNumber({ value, suffix = "" }: { value: string; suffix?: string 
   return <>{display}{suffix}</>
 }
 
-export function RecommendCard({
+function RecommendCardInner({
   restaurant: r,
   rank,
   onFeedback,
@@ -368,3 +368,10 @@ export function RecommendCard({
     </article>
   )
 }
+
+/** memo 化：餐厅数据/收藏状态不变时跳过重渲，避免流式 token 更新连带重绘所有卡片 */
+export const RecommendCard = memo(RecommendCardInner, (prev, next) => {
+  return prev.restaurant.id === next.restaurant.id
+    && prev.isFav === next.isFav
+    && prev.rank === next.rank
+})

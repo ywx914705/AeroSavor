@@ -310,7 +310,7 @@ async def chat(
             timeout=80.0,
         )
     except asyncio.TimeoutError:
-        logger.warning("graph invoke timeout (60s) for session=%s query=%s", session.id, req.message[:30])
+        logger.warning("graph invoke timeout (80s) for session=%s query=%s", session.id, req.message[:30])
         # 超时时返回兜底响应，而不是硬 504 错误
         fallback_msg = "抱歉，处理时间过长，请稍后再试。你也可以换个更具体的问题，比如「推荐火锅」或「附近有什么好吃的」 😊"
         await append_message(db, str(session.id), "assistant", fallback_msg)
