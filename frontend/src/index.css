@@ -453,7 +453,7 @@ html, body, #root {
 /* ── Anti-jitter: scroll container uses instant scroll during streaming ── */
 .chat-scroll-container {
   overflow-anchor: auto;
-  contain: layout style paint;
+  contain: style paint;
 }
 
 /* ── Streaming bubble: 克制边框高亮，不抖 box-shadow ── */
@@ -1743,12 +1743,12 @@ aside::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
 
 /* ── ThinkingPanel: Expand/Collapse (enhanced) ── */
 @keyframes panel-expand {
-  from { max-height: 0; opacity: 0; transform: translateY(-8px); }
-  to { max-height: 500px; opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 @keyframes panel-collapse {
-  from { max-height: 500px; opacity: 1; transform: translateY(0); }
-  to { max-height: 0; opacity: 0; transform: translateY(-8px); }
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-8px); }
 }
 .thinking-panel-expand {
   animation: panel-expand 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -1757,6 +1757,7 @@ aside::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
 .thinking-panel-collapse {
   animation: panel-collapse 0.3s ease-out both;
   overflow: hidden;
+  max-height: 0;
 }
 
 /* ── Agent Status Panel: SSE Reconnect Status ── */

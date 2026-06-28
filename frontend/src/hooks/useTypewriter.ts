@@ -29,7 +29,7 @@ export function useTypewriter(fullText: string) {
     if (rafRef.current !== null) return
 
     let lastTime: number | null = null
-    const RENDER_INTERVAL = 33 // ~30fps
+    const RENDER_INTERVAL = 67 // ~15fps — sufficient for typing feel, halves layout thrash
 
     const tick = (time: number) => {
       if (lastTime === null) lastTime = time

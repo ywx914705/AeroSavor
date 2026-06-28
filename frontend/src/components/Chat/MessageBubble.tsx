@@ -113,12 +113,10 @@ function MessageBubbleImpl({ msg }: { msg: ChatMessage }) {
       {/* Bubble */}
       <div
         className={`inline-block text-left max-w-[88%] md:max-w-[78%] ${
-          isAgentStreaming ? "min-h-[80px]" : ""
-        } transition-shadow duration-300 transition-colors duration-300 ${
           isUser
             ? "bg-gradient-to-br from-slate-800 via-slate-800 to-slate-900 text-white rounded-[20px] rounded-tr-md px-5 py-3.5 shadow-xl shadow-slate-900/10"
-            : `bg-white rounded-[20px] rounded-tl-md px-5 py-3.5 border border-slate-100/70 shadow-md shadow-slate-100/40
-              ${isAgentStreaming ? "streaming-border-active" : "hover:shadow-lg hover:shadow-slate-200/50"}`
+            : `bg-white rounded-[20px] rounded-tl-md px-5 py-3.5 min-h-[40px] border border-slate-100/70 shadow-md shadow-slate-100/40
+              ${isAgentStreaming ? "streaming-border-active" : "transition-shadow duration-300 hover:shadow-lg hover:shadow-slate-200/50"}`
         }`}
       >
         {isUser ? (

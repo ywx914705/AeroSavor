@@ -145,6 +145,7 @@ function ChatContent() {
   const userScrolledUp = useRef(false)
 
   const lastMsgLen = messages.length > 0 ? messages[messages.length - 1].content.length : 0
+  const scrollRafRef = useRef<number | null>(null)
 
   const scrollToBottom = useCallback(() => {
     userScrolledUp.current = false
@@ -153,15 +154,29 @@ function ChatContent() {
 
   // Auto-scroll only when user is near the bottom
   // 使用 instant 滚动避免 smooth 动画与内容增长竞争导致抖动
+  // RAF 节流：同帧多次状态更新只触发一次滚动，避免双重布局抖动
   useEffect(() => {
     const el = scrollRef.current
     if (!el || userScrolledUp.current) return
-    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 200
-    if (isNearBottom) {
-      // 用 instant 而非 smooth：流式输出时内容持续增长，smooth 滚动会跟不上
-      el.scrollTo({ top: el.scrollHeight, behavior: "instant" })
-    }
+    if (scrollRafRef.current !== null) return
+    scrollRafRef.current = requestAnimationFrame(() => {
+      scrollRafRef.current = null
+      if (!el || userScrolledUp.current) return
+      const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 200
+      if (isNearBottom) {
+        el.scrollTo({ top: el.scrollHeight, behavior: "instant" })
+      }
+    })
   }, [messages.length, lastMsgLen, recommendations.length])
+
+  // 清理 RAF
+  useEffect(() => {
+    return () => {
+      if (scrollRafRef.current !== null) {
+        cancelAnimationFrame(scrollRafRef.current)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     const el = scrollRef.current
@@ -194,7 +209,7 @@ function ChatContent() {
       <div className="flex-1 flex flex-col min-w-0 bg-transparent">
         <CenterTopBar />
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto relative overflow-y-anchor-bottom chat-scroll-container" role="log">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto relative chat-scroll-container" role="log">
           {hasContent ? (
             <div className="px-5 md:px-8 py-5 md:py-8">
               <div className="max-w-2xl mx-auto">
@@ -235,7 +250,9 @@ function ChatContent() {
           {showScrollBtn && <ScrollToBottom onClick={scrollToBottom} />}
         </div>
 
-        <InputBar onSend={sendMessage} onStop={stopGeneration} disabled={isStreaming} />
+        <div className="shrink-0">
+          <InputBar onSend={sendMessage} onStop={stopGeneration} disabled={isStreaming} />
+        </div>
       </div>
 
       {/* Right: Agent status panel */}

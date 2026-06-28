@@ -64,7 +64,7 @@ export function InputBar({ onSend, onStop, disabled }: Props) {
       <div className="max-w-2xl mx-auto">
         {/* Input container */}
         <div className={`relative ${isFocused ? "flow-border active" : ""}`}>
-          <div className={`rounded-2xl transition-all duration-500 relative z-10
+          <div className={`rounded-2xl transition-colors duration-300 transition-shadow duration-300 relative z-10
             ${isStreaming
               ? "bg-white/98 border-2 border-amber-200/60 shadow-lg shadow-amber-100/30 streaming-border-active"
               : isSubmitting
